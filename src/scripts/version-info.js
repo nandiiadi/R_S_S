@@ -1,10 +1,25 @@
-// TODO: Adjust this script to work with the new CI/CD pipeline
-import { execSync } from "node:child_process"
-import { writeFileSync } from "node:fs"
+import fs from 'node:fs'
+import path from 'node:path'
+import { execSync } from 'node:child_process'
 
-const versionInfo = {
-  gitHash: execSync("git rev-parse --short HEAD").toString().trim(),
-  gitDate: execSync("git log -1 --format=%cd --date=iso").toString().trim(),
+const outputPath = path.resolve('src/version-info.json')
+
+let commit = 'docker'
+let buildTime = new Date().toISOString()
+
+try {
+  commit = execSync('git rev-parse --short HEAD')
+    .toString()
+    .trim()
+} catch {
+  console.warn('[version-info] Git metadata unavailable, using fallback version')
 }
 
-writeFileSync("src/version-info.json", JSON.stringify(versionInfo, null, 2))
+const versionInfo = {
+  commit,
+  buildTime,
+}
+
+fs.writeFileSync(outputPath, JSON.stringify(versionInfo, null, 2))
+
+console.log('[version-info] Generated src/version.json')

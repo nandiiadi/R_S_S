@@ -1,8 +1,13 @@
 :2000
 
-root * /srv
+# Forward /mercury/* to the sidecar (strips prefix before forwarding)
+handle_path /mercury/* {
+	reverse_proxy mercury-proxy:3001
+}
 
-try_files {path} {path}/ /index.html
-
-# Enable the static file server.
-file_server
+# Serve the ReactFlux SPA
+handle {
+	root * /srv
+	try_files {path} {path}/ /index.html
+	file_server
+}

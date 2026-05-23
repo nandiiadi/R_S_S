@@ -1,39 +1,67 @@
+# =========================================================
 # Stage 1: Build the React application
-# Specify the version to ensure consistent builds
+# =========================================================
 FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 
-# Install git
+# Install git (some dependencies still expect git binaries)
 RUN apk add --no-cache git
 
-# enable corepack to use pnpm
+# Enable corepack for pnpm
 RUN corepack enable
 
-# Set the working directory in the container
+# Set working directory
 WORKDIR /app
 
-# Copy the package.json and pnpm-lock.yaml files
+# Copy dependency manifests first (better Docker layer caching)
 COPY package.json pnpm-lock.yaml ./
 
-# Install dependencies using pnpm
+# Install dependencies
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
-# Copy the rest of the code
+# Copy application source
 COPY . .
 
-# Build the project
-RUN pnpm run build
+# =========================================================
+# Vite build-time environment
+# =========================================================
 
-# Stage 2: Run the server using Caddy
-# Specify the version for consistency
+# Mercury proxy path routed through Caddy
+# Override with:
+# --build-arg VITE_MERCURY_PROXY_URL=...
+ARG VITE_MERCURY_PROXY_URL=/mercury
+
+ENV VITE_MERCURY_PROXY_URL=$VITE_MERCURY_PROXY_URL
+
+# =========================================================
+# Disable git-hook tooling inside Docker
+# =========================================================
+
+ENV HUSKY=0
+ENV LEFTHOOK=0
+ENV CI=1
+
+# Remove prepare hook to prevent lefthook/git failures
+RUN npm pkg delete scripts.prepare || true
+
+# =========================================================
+# Build ReactFlux
+# =========================================================
+
+RUN HUSKY=0 LEFTHOOK=0 CI=1 pnpm run build
+
+# =========================================================
+# Stage 2: Runtime image using Caddy
+# =========================================================
 FROM caddy:2
 
-# Copy built assets from the builder stage
+# Copy built frontend assets
 COPY --from=build /app/build /srv
 
-# Caddy will pick up the Caddyfile automatically
+# Copy Caddy configuration
 COPY Caddyfile /etc/caddy/Caddyfile
 
-# Expose the port Caddy listens on
+# Expose HTTP port
 EXPOSE 2000
 
+# Start Caddy
 CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]

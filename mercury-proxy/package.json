@@ -1,0 +1,16 @@
+{
+  "name": "mercury-proxy",
+  "version": "1.0.0",
+  "description": "Mercury Parser HTTP sidecar for ReactFlux",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@jocmp/mercury-parser": "^3.0.8"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT"
+}

@@ -18,6 +18,27 @@ import {
 } from "@/store/dataState"
 import { checkIsInLast24Hours } from "@/utils/date"
 
+const MERCURY_PROXY_URL = import.meta.env.VITE_MERCURY_PROXY_URL ?? "http://localhost:3001"
+const MERCURY_TIMEOUT_MS = 10_000
+
+const fetchFromMercury = async (articleUrl) => {
+  const controller = new AbortController()
+  const timerId = setTimeout(() => controller.abort(), MERCURY_TIMEOUT_MS)
+  try {
+    const endpoint = `${MERCURY_PROXY_URL}/parse?url=${encodeURIComponent(articleUrl)}`
+    console.debug("[Mercury] Fetching:", endpoint)
+    const response = await fetch(endpoint, { signal: controller.signal })
+    if (!response.ok) {
+      throw new Error(`Mercury proxy responded with HTTP ${response.status}`)
+    }
+    const data = await response.json()
+    console.debug("[Mercury] Success:", { title: data.title, contentLength: data.content?.length })
+    return data
+  } finally {
+    clearTimeout(timerId)
+  }
+}
+
 const updateEntries = (entries, updatedEntries) => {
   const updatedEntryIds = new Set(updatedEntries.map((entry) => entry.id))
   return entries.map((entry) => {
@@ -136,14 +157,36 @@ const useEntryActions = () => {
   }
 
   const handleFetchContent = async () => {
+    // Try Mercury proxy first when the entry has a URL
+    if (activeContent.url) {
+      try {
+        const mercuryResult = await fetchFromMercury(activeContent.url)
+        if (mercuryResult.content) {
+          console.debug("[Mercury] Using Mercury content for entry", activeContent.id)
+          Message.success(polyglot.t("actions.fetched_content_success"))
+          setActiveContent({ ...activeContent, content: mercuryResult.content })
+          return
+        }
+        console.warn("[Mercury] Received empty content, falling back to Miniflux scraper")
+      } catch (error) {
+        if (error.name === "AbortError") {
+          console.warn("[Mercury] Request timed out after", MERCURY_TIMEOUT_MS, "ms, falling back to Miniflux scraper")
+        } else {
+          console.warn("[Mercury] Failed:", error.message, "— falling back to Miniflux scraper")
+        }
+      }
+    }
+
+    // Fallback: Miniflux built-in scraper
     try {
+      console.debug("[Mercury] Using Miniflux scraper for entry", activeContent.id)
       const response = await getOriginalContent(activeContent.id)
       Message.success(polyglot.t("actions.fetched_content_success"))
       const newContent = response.content
       const newReadingTime = response.reading_time ?? activeContent.reading_time
       setActiveContent({ ...activeContent, content: newContent, readingTime: newReadingTime })
     } catch (error) {
-      console.error("Failed to fetch content:", error)
+      console.error("[Mercury] Miniflux fallback also failed:", error)
       Message.error(polyglot.t("actions.fetched_content_error"))
     }
   }

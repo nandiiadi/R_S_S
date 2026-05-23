@@ -1,135 +1,359 @@
-# ReactFlux
+# ReactFlux + Mercury + Miniflux
 
-Read in other languages: [Deutsch](docs/README.de-DE.md), [Español](docs/README.es-ES.md), [Français](docs/README.fr-FR.md), [简体中文](docs/README.zh-CN.md)
+Production-ready self-hosted RSS reader with:
 
-## Overview
+* ReactFlux frontend
+* Miniflux backend
+* Mercury Parser full-article extraction
+* PostgreSQL database
+* Docker Compose deployment
 
-ReactFlux is a third-party web frontend for [Miniflux](https://github.com/miniflux/v2), aimed at providing a more user-friendly reading experience.
+---
 
-Supported Miniflux versions: 2.1.4 and higher.
+# Features
 
-Key features include:
+* Full-text article extraction
+* Clean React-based UI
+* Miniflux backend compatibility
+* Docker-based deployment
+* ARM64 compatible
+* LAN accessible
+* Mercury fallback integration
+* Production-ready architecture
 
-- Modern interface design
-- Responsive layout with touch gestures support
-- Support for dark mode and custom themes
-- Customizable reading experience:
-  - Font family and size settings
-  - Article width adjustment
-  - Title alignment options
-  - Image viewer with zoom and slideshow
-  - Footnotes enhancement
-  - Code syntax highlighting
-  - Estimated reading time
-- Article and feed management:
-  - Google-like syntax for search
-  - Filter articles by read status, publish date, title, content, or author
-  - Batch operations for feeds
-  - Full-text fetching support
-  - De-duplicate articles by hash, title, or URL
-  - Auto mark articles as read while scrolling
-- Advanced features:
-  - Keyboard shortcuts (customizable)
-  - Batch update the host of filtered subscription URLs (useful for replacing RSSHub instances)
-  - Batch refresh errored subscriptions
-  - Save articles to third-party services
-- I18n supports (Deutsch / English / Español / Français / 简体中文)
-- Other features waiting for you to discover...
+---
 
-## Online Demo & Screenshots
+# Architecture
 
-Try ReactFlux with our [online demo instance](https://reactflux.pages.dev).
+```text
+Browser
+   ↓
+ReactFlux (Caddy)
+   ↓
+/mercury/parse
+   ↓
+Mercury Proxy
+   ↓
+@jocmp/mercury-parser
+   ↓
+Extracted Full Article
+```
 
-See how ReactFlux looks in different themes:
+Backend services:
 
-![screenshot](images/screenshot.png)
-![devices](images/devices.png)
+```text
+ReactFlux
+Mercury Proxy
+Miniflux
+PostgreSQL
+```
 
-## Quick Start
+---
 
-1. Ensure you have a working Miniflux instance
-2. Directly use our [online demo instance](https://reactflux.pages.dev) or deploy ReactFlux using one of the methods below
-3. Log in using your Miniflux username and password or API key (recommended)
+# Ports
 
-## Deployment
+| Service       | Port          |
+| ------------- | ------------- |
+| ReactFlux     | 2000          |
+| Miniflux      | 8080          |
+| Mercury Proxy | internal only |
+| PostgreSQL    | internal only |
 
-### Cloudflare Pages
+---
 
-ReactFlux is built with React and generates a set of static web files after building, which can be directly deployed on Cloudflare Pages.
+# Requirements
 
-You can deploy it on Cloudflare Pages by selecting `Framework preset` as `Create React App`.
+* Docker
+* Docker Compose
 
-### Using Pre-built Files
+Recommended:
 
-You can download the pre-built files from the `gh-pages` branch and deploy them to any static hosting service that supports single-page applications (SPA).
+* Docker Desktop
+* Linux
+* WSL2
 
-Make sure to configure URL rewriting to redirect all requests to `index.html`.
+---
 
-If you are deploying using Nginx, you might need to add the following configuration:
+# Quick Start
 
-```nginx
-location / {
-    try_files $uri $uri/ /index.html;
+## 1. Clone repository
+
+```bash
+git clone <repo-url>
+cd ReactFlux
+```
+
+---
+
+## 2. Create `.env`
+
+```env
+POSTGRES_PASSWORD=changeme
+MINIFLUX_ADMIN_USER=admin
+MINIFLUX_ADMIN_PASSWORD=changeme
+REACTFLUX_PORT=2000
+MINIFLUX_PORT=8080
+```
+
+---
+
+## 3. Build containers
+
+```bash
+docker compose build --no-cache
+```
+
+---
+
+## 4. Start stack
+
+```bash
+docker compose up -d
+```
+
+---
+
+## 5. Open services
+
+## ReactFlux
+
+```text
+http://localhost:2000
+```
+
+## Miniflux
+
+```text
+http://localhost:8080
+```
+
+---
+
+# Default Workflow
+
+## ReactFlux UI
+
+ReactFlux is the main frontend UI.
+
+When opening articles:
+
+1. ReactFlux requests full content
+2. Request goes to `/mercury/parse`
+3. Mercury extracts article body
+4. Full content is displayed inside ReactFlux
+
+---
+
+# Mercury API
+
+Internal API endpoint:
+
+```text
+GET /parse?url=<article_url>
+```
+
+Example:
+
+```text
+http://localhost:3001/parse?url=https://example.com
+```
+
+Example response:
+
+```json
+{
+  "title": "Example Domain",
+  "content": "<div>...</div>",
+  "excerpt": "Example excerpt",
+  "author": null,
+  "date_published": null,
+  "lead_image_url": null,
+  "url": "https://example.com"
 }
 ```
 
-Or using Caddy, you might need to add the following configuration:
+This endpoint allows:
 
-```caddyfile
-try_files {path} {path}/ /index.html
+* future integrations
+* AI summarization
+* article caching
+* custom frontends
+* external automation
+
+---
+
+# Docker Services
+
+## ReactFlux
+
+Frontend UI served through Caddy.
+
+Accessible publicly:
+
+```text
+http://localhost:2000
 ```
 
-### Vercel
+---
 
-[![Deploy to Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/electh/ReactFlux)
+## Mercury Proxy
 
-### Docker
+Node.js HTTP sidecar using:
 
-[![dockeri.co](https://dockerico.blankenship.io/image/electh/reactflux)](https://hub.docker.com/r/electh/reactflux)
+```text
+@jocmp/mercury-parser
+```
+
+Provides article extraction API.
+
+Internal Docker service only.
+
+---
+
+## Miniflux
+
+RSS backend service.
+
+Accessible publicly:
+
+```text
+http://localhost:8080
+```
+
+---
+
+## PostgreSQL
+
+Database for Miniflux.
+
+Persistent Docker volume storage enabled.
+
+---
+
+# Useful Commands
+
+## Start
 
 ```bash
-docker run -p 2000:2000 electh/reactflux
+docker compose up -d
 ```
 
-Or using [Docker Compose](docker-compose.yml):
+## Stop
 
 ```bash
-docker-compose up -d
+docker compose down
 ```
 
-<!-- ### Zeabur (Outdated, unrecommended)
+## Rebuild
 
-[![Deploy to Zeabur](https://zeabur.com/button.svg)](https://zeabur.com/templates/OKXO3W) -->
+```bash
+docker compose build --no-cache
+```
 
-## Translation Guide
+## Logs
 
-To help us translate ReactFlux into your language, please contribute to the `locales` folder and send a pull request.
+```bash
+docker compose logs -f
+```
 
-Additionally, you need to add a README file for the respective language and reference it in all existing README files.
+## Running containers
 
-You should also modify parts of the source code to include the i18n language packages for `Arco Design` and `Day.js`.
+```bash
+docker ps
+```
 
-For detailed changes, please refer to the modifications in [PR #145](https://github.com/electh/ReactFlux/pull/145).
+---
 
-### Current Translators
+# Updating
 
-| Language | Translator                                      |
-| -------- | ----------------------------------------------- |
-| Deutsch  | [DonkeeeyKong](https://github.com/donkeeeykong) |
-| Español  | [Victorhck](https://github.com/victorhck)       |
-| Français | [MickGe](https://github.com/MickGe)             |
-| 简体中文 | [Neko Aria](https://github.com/NekoAria)        |
+## Pull latest changes
 
-## Contributors
+```bash
+git pull
+```
 
-> Thanks to all the contributors who have made this project more awesome!
+## Rebuild
 
-<a href="https://github.com/electh/ReactFlux/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=electh/ReactFlux" alt="Contributors for ReactFlux" />
-</a>
+```bash
+docker compose build --no-cache
+```
 
-Made with [contrib.rocks](https://contrib.rocks).
+## Restart
 
-## Star History
+```bash
+docker compose up -d
+```
 
-[![Star History](https://starchart.cc/electh/ReactFlux.svg)](https://starchart.cc/electh/ReactFlux)
+---
+
+# Persistence
+
+Database data is stored in Docker volumes.
+
+Containers can be recreated safely.
+
+---
+
+# LAN Access
+
+Replace `localhost` with server IP.
+
+Example:
+
+```text
+http://192.168.1.9:2000
+```
+
+---
+
+# Development Notes
+
+## Important Mercury Route
+
+Frontend uses:
+
+```text
+/mercury/parse
+```
+
+Caddy internally proxies this to:
+
+```text
+http://mercury-proxy:3001
+```
+
+This avoids browser CORS issues and keeps Mercury internal-only.
+
+---
+
+# Production Notes
+
+Recommended:
+
+* reverse proxy
+* HTTPS
+* regular backups
+* external PostgreSQL backups
+
+Optional future improvements:
+
+* Redis cache
+* AI summarization
+* Readability fallback
+* article archiving
+* search indexing
+
+---
+
+# Stack Summary
+
+```text
+ReactFlux
++ Mercury Parser
++ Miniflux
++ PostgreSQL
++ Docker Compose
++ Caddy
+```
+
+Production-ready self-hosted full-text RSS platform.
