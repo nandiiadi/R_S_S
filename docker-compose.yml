@@ -1,13 +1,8 @@
 services:
 
-  # ── ReactFlux SPA (Caddy) ────────────────────────────────────────────────────
+  # ===== ReactFlux SPA (Caddy) =================================================
   reactflux:
-    build:
-      context: .
-      args:
-        # Relative path: browser resolves against its own origin (http://host:2000).
-        # Caddy strips /mercury and forwards to the sidecar internally.
-        VITE_MERCURY_PROXY_URL: /mercury
+    image: ghcr.io/nandiiadi/r_s_s:latest
     restart: unless-stopped
     ports:
       - "${REACTFLUX_PORT:-2000}:2000"
@@ -15,20 +10,31 @@ services:
       - mercury-proxy
     networks:
       - internal
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:2000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # ── Mercury Parser sidecar ──────────────────────────────────────────────────
-  # Not exposed on a host port — reached only via Caddy at /mercury/*
+  # ===== Mercury Parser Sidecar ================================================
   mercury-proxy:
     build: ./mercury-proxy
     restart: unless-stopped
+    expose:
+      - "3001"
     environment:
       PORT: "3001"
       TIMEOUT_MS: "15000"
       CORS_ORIGIN: "*"
     networks:
       - internal
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # ── Miniflux RSS backend ─────────────────────────────────────────────────────
+  # ===== Miniflux RSS Backend ==================================================
   miniflux:
     image: miniflux/miniflux:latest
     restart: unless-stopped
@@ -43,10 +49,11 @@ services:
       CREATE_ADMIN: "1"
       ADMIN_USERNAME: "${MINIFLUX_ADMIN_USER:-admin}"
       ADMIN_PASSWORD: "${MINIFLUX_ADMIN_PASSWORD:-changeme}"
+      BASE_URL: "http://localhost:${MINIFLUX_PORT:-8080}"
     networks:
       - internal
 
-  # ── PostgreSQL ───────────────────────────────────────────────────────────────
+  # ===== PostgreSQL ============================================================
   db:
     image: postgres:17-alpine
     restart: unless-stopped
@@ -56,14 +63,15 @@ services:
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-miniflux}"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U miniflux -d miniflux"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - internal
 
+# =============================================================================
 volumes:
   postgres_data:
 
