@@ -115,7 +115,7 @@ DOMPurify.addHook("afterSanitizeAttributes", (node) => {
  * @returns {string}     Sanitized HTML
  */
 export function sanitizeHtml(html) {
-  if (!html || typeof html !== "string") return ""
+  if (!html || typeof html !== "string") {return ""}
   try {
     return DOMPurify.sanitize(html, PURIFY_CONFIG)
   } catch {

@@ -29,22 +29,22 @@ const DANGEROUS_CSS_VALUE = /expression\s*\(|javascript\s*:|vbscript\s*:|behavio
  * - Never throws.
  */
 export function parseStyleString(styleStr) {
-  if (!styleStr || typeof styleStr !== "string") return {}
+  if (!styleStr || typeof styleStr !== "string") {return {}}
 
   const result = {}
   try {
     for (const declaration of styleStr.split(";")) {
       const colonIdx = declaration.indexOf(":")
-      if (colonIdx < 1) continue
+      if (colonIdx < 1) {continue}
 
       const rawProp = declaration.slice(0, colonIdx).trim()
       const rawVal = declaration.slice(colonIdx + 1).trim()
 
-      if (!rawProp || !rawVal) continue
-      if (DANGEROUS_CSS_VALUE.test(rawVal)) continue
+      if (!rawProp || !rawVal) {continue}
+      if (DANGEROUS_CSS_VALUE.test(rawVal)) {continue}
 
       // kebab-case → camelCase  (e.g. background-color → backgroundColor)
-      const camelProp = rawProp.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
+      const camelProp = rawProp.replaceAll(/-([a-z])/g, (_, c) => c.toUpperCase())
       result[camelProp] = rawVal
     }
   } catch {
@@ -63,7 +63,7 @@ const SAFE_URL = /^(https?:|mailto:|tel:|\/|#|data:image\/)/i
  * Strips leading/trailing whitespace and rejects javascript: / vbscript:.
  */
 export function sanitizeUrl(url) {
-  if (!url || typeof url !== "string") return ""
+  if (!url || typeof url !== "string") {return ""}
   const trimmed = url.trim()
   return SAFE_URL.test(trimmed) ? trimmed : ""
 }
@@ -133,7 +133,7 @@ export function normalizeAttribs(attribs = {}) {
       const key = rawKey.toLowerCase()
 
       // 1. Drop event handlers
-      if (EVENT_HANDLER_RE.test(key)) continue
+      if (EVENT_HANDLER_RE.test(key)) {continue}
 
       // 2. Convert style strings to objects
       if (key === "style") {
@@ -144,7 +144,7 @@ export function normalizeAttribs(attribs = {}) {
       // 3. Sanitize URL attributes
       if (URL_ATTRS.has(key)) {
         const safe = sanitizeUrl(value)
-        if (safe) props[ATTR_TO_PROP[key] ?? key] = safe
+        if (safe) {props[ATTR_TO_PROP[key] ?? key] = safe}
         continue
       }
 
@@ -196,26 +196,32 @@ export function normalizeImgAttribs(attribs = {}) {
   try {
     for (const [rawKey, value] of Object.entries(attribs)) {
       const key = rawKey.toLowerCase()
-      if (!IMG_ATTR_ALLOWLIST.has(key)) continue
+      if (!IMG_ATTR_ALLOWLIST.has(key)) {continue}
 
       switch (key) {
-        case "src":
+        case "src": {
           props.src = sanitizeUrl(value)
           break
-        case "srcset":
+        }
+        case "srcset": {
           props.srcSet = value
           break
-        case "crossorigin":
+        }
+        case "crossorigin": {
           props.crossOrigin = value
           break
-        case "referrerpolicy":
+        }
+        case "referrerpolicy": {
           props.referrerPolicy = value
           break
-        case "style":
+        }
+        case "style": {
           props.style = typeof value === "string" ? parseStyleString(value) : (value ?? {})
           break
-        default:
+        }
+        default: {
           props[key] = value
+        }
       }
     }
   } catch {

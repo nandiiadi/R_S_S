@@ -302,14 +302,14 @@ const handleIframe = (node) => {
     )
   }
 
-  return undefined
+  return
 }
 
 const getHtmlParserOptions = (imageSources, togglePhotoSlider) => {
   const options = {
     replace: (node) => {
       if (node.type !== "tag") {
-        return undefined
+        return
       }
 
       switch (node.name) {
@@ -337,7 +337,7 @@ const getHtmlParserOptions = (imageSources, togglePhotoSlider) => {
           return handleContentTable(node)
         }
         default: {
-          return undefined
+          return
         }
       }
     },
