@@ -3,6 +3,26 @@ node_modules
 dist
 build
 coverage
+
+# Dev/CI overrides — not needed inside image
 .devcontainer
 .vscode
+docker-compose.dev.yml
+docker-compose.debug.yml
+
+# Docs and repo meta — not needed inside image
+docs
+images
+.github
+.editorconfig
 *.log
+*.md
+!README.md
+
+# pnpm offline store
+.pnpm-store
+
+# Env templates (never bake into image)
+.env
+.env.*
+!.env.example

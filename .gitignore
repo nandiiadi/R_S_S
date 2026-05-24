@@ -5,5 +5,18 @@ build
 .vscode
 .devcontainer
 *.log
+
+# OS artifacts
 .DS_Store
-coverage
+Thumbs.db
+
+# pnpm content store (offline cache – do not commit)
+.pnpm-store/
+
+# Generated at build time – not source-controlled
+src/version-info.json
+
+# Temporary / debug files
+dir_log.txt
+*.tmp
+*.bak

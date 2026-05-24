@@ -1,4 +1,4 @@
-name: Linter
+name: Lint
 
 on:
   pull_request:
@@ -8,17 +8,23 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Install pnpm
-        run: npm install -g pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Run ESLint check
+      - name: ESLint
         run: pnpm lint
 
-      - name: Run Prettier check
+      - name: Prettier
         run: pnpm format:check

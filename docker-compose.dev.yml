@@ -1,0 +1,56 @@
+# ============================================================
+# DEV OVERRIDE — Development Vite dev server
+# ============================================================
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# Access:
+#   ReactFlux (Vite dev)  →  http://localhost:3000
+#   Mercury proxy         →  http://localhost:3001  (internal + host)
+#
+# NOTE: vite.config.js sets server.port = 3000 (not 5173).
+#       Port 2000 stays bound on the host but nothing listens on it
+#       inside this container — that is harmless.
+#
+# DO NOT use this file in production.
+# DO NOT commit as a replacement for docker-compose.yml.
+# ============================================================
+
+services:
+
+  # ── ReactFlux: replace Caddy runtime with Vite dev server ───────────────────
+  reactflux:
+    build:
+      context: .
+      # Stop at the node/pnpm build stage — skip the Caddy runtime stage.
+      target: build
+      # No VITE_MERCURY_PROXY_URL build arg: the env var below is read
+      # by the Vite dev server at startup from process.env instead.
+      args: {}
+    command: pnpm dev --host 0.0.0.0
+    ports:
+      # Vite dev server port (configured in vite.config.js server.port).
+      - "3000:3000"
+    environment:
+      # Browser-reachable URL for the Mercury proxy sidecar.
+      # Matches the host port exposed by mercury-proxy below.
+      # Fallback in useEntryActions.js is already "http://localhost:3001",
+      # so this is explicit rather than relying on the fallback.
+      VITE_MERCURY_PROXY_URL: "http://localhost:3001"
+      HUSKY: "0"
+      LEFTHOOK: "0"
+      CI: "0"
+    volumes:
+      # Mount host source into the container for hot module reload.
+      - .:/app
+      # Preserve the node_modules installed during image build.
+      # Without this, the bind mount above would shadow /app/node_modules
+      # with the (empty) host directory, breaking all imports.
+      - /app/node_modules
+
+  # ── Mercury proxy: expose on host port so the browser can reach it ──────────
+  # In production, only Caddy reaches mercury-proxy via the internal network.
+  # In dev mode, the browser calls it directly at http://localhost:3001.
+  mercury-proxy:
+    ports:
+      - "3001:3001"

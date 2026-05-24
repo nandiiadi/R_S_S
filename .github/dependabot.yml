@@ -1,15 +1,17 @@
 version: 2
 updates:
+  # ── Frontend (pnpm) ──────────────────────────────────────
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
       day: friday
       time: "18:00"
-      timezone: Asia/Shanghai
+      timezone: UTC
     cooldown:
       default-days: 1
     ignore:
+      # React 19 is a major breaking change — upgrade manually when ready
       - dependency-name: react
         versions: [">=19.0.0"]
       - dependency-name: react-dom
@@ -19,10 +21,20 @@ updates:
       - dependency-name: "@types/react-dom"
         versions: [">=19.0.0"]
 
+  # ── Mercury proxy (npm) ───────────────────────────────────
+  - package-ecosystem: npm
+    directory: /mercury-proxy
+    schedule:
+      interval: weekly
+      day: friday
+      time: "18:00"
+      timezone: UTC
+
+  # ── GitHub Actions ────────────────────────────────────────
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
       day: friday
       time: "18:00"
-      timezone: Asia/Shanghai
+      timezone: UTC

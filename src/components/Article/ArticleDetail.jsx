@@ -1,6 +1,6 @@
 import { Divider, Tag, Typography } from "@arco-design/web-react"
 import { useStore } from "@nanostores/react"
-import ReactHtmlParser, { domToReact } from "html-react-parser"
+import ReactHtmlParser, { attributesToProps, domToReact } from "html-react-parser"
 import { littlefoot } from "littlefoot"
 import { forwardRef, useEffect, useRef } from "react"
 import { useNavigate } from "react-router"
@@ -12,6 +12,7 @@ import Zoom from "yet-another-react-lightbox/plugins/zoom"
 import "yet-another-react-lightbox/styles.css"
 import "yet-another-react-lightbox/plugins/counter.css"
 
+import ArticleErrorBoundary from "./ArticleErrorBoundary"
 import CodeBlock from "./CodeBlock"
 import ImageLinkTag from "./ImageLinkTag"
 import ImageOverlayButton from "./ImageOverlayButton"
@@ -29,6 +30,8 @@ import {
 } from "@/store/contentState"
 import { settingsState } from "@/store/settingsState"
 import { generateReadableDate, generateReadingTime } from "@/utils/date"
+import { normalizeAttribs, sanitizeUrl } from "@/utils/htmlAttribs"
+import { sanitizeHtml } from "@/utils/htmlSanitize"
 import { extractImageSources } from "@/utils/images"
 import "./ArticleDetail.css"
 import "./littlefoot.css"
@@ -180,11 +183,12 @@ const processFigcaptionContent = (children) => {
     }
     if (child.type === "tag") {
       const Tag = child.name
-      const props = child.attribs || {}
 
       if (child.name === "br") {
         return null
       }
+
+      const props = attributesToProps(child.attribs || {})
 
       return (
         <Tag key={index} {...props}>
@@ -267,33 +271,45 @@ const handleCodeBlock = (node) => {
 const handleVideo = (node) => {
   const sourceNode = node.children?.find((child) => child.name === "source" && child.attribs?.src)
 
-  const videoSrc = sourceNode?.attribs.src || node.attribs.src
+  const videoSrc = sanitizeUrl(sourceNode?.attribs.src || node.attribs.src || "")
 
   if (!videoSrc) {
     return node
   }
 
   return (
-    <PlyrPlayer poster={node.attribs.poster} sourceType={sourceNode?.attribs.type} src={videoSrc} />
+    <PlyrPlayer
+      poster={sanitizeUrl(node.attribs.poster ?? "")}
+      sourceType={sourceNode?.attribs.type}
+      src={videoSrc}
+    />
   )
 }
 
 const handleIframe = (node) => {
-  const src = node.attribs?.src
+  const src = sanitizeUrl(node.attribs?.src ?? "")
 
-  // Check if it's a YouTube iframe
+  // Only render YouTube iframes — all others are silently dropped for security
   if (src && (src.includes("youtube.com") || src.includes("youtube-nocookie.com"))) {
-    return <iframe {...node.attribs} referrerPolicy="strict-origin-when-cross-origin" />
+    // normalizeAttribs handles style→object, className, strips event handlers, etc.
+    const { style: _style, ...safeProps } = normalizeAttribs(node.attribs)
+    return (
+      <iframe
+        {...safeProps}
+        referrerPolicy="strict-origin-when-cross-origin"
+        sandbox="allow-scripts allow-same-origin allow-presentation"
+      />
+    )
   }
 
-  return node
+  return undefined
 }
 
 const getHtmlParserOptions = (imageSources, togglePhotoSlider) => {
   const options = {
     replace: (node) => {
       if (node.type !== "tag") {
-        return node
+        return undefined
       }
 
       switch (node.name) {
@@ -321,7 +337,7 @@ const getHtmlParserOptions = (imageSources, togglePhotoSlider) => {
           return handleContentTable(node)
         }
         default: {
-          return node
+          return undefined
         }
       }
     },
@@ -367,7 +383,7 @@ const ArticleDetail = forwardRef((_, ref) => {
   const imageSources = extractImageSources(activeContent.content)
   const htmlParserOptions = getHtmlParserOptions(imageSources, togglePhotoSlider)
 
-  const parsedHtml = ReactHtmlParser(activeContent.content, htmlParserOptions)
+  const parsedHtml = ReactHtmlParser(sanitizeHtml(activeContent.content), htmlParserOptions)
   const { id: categoryId, title: categoryTitle } = activeContent.feed.category
   const { id: feedId, title: feedTitle } = activeContent.feed
 
@@ -467,7 +483,9 @@ const ArticleDetail = forwardRef((_, ref) => {
                 }}
               />
             )}
-            {parsedHtml}
+            <ArticleErrorBoundary>
+              {parsedHtml}
+            </ArticleErrorBoundary>
             <Lightbox
               animation={getLightboxAnimationConfig()}
               carousel={{ finite: true, padding: 0 }}

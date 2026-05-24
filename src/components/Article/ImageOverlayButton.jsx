@@ -6,6 +6,7 @@ import ImageLinkTag from "./ImageLinkTag"
 
 import { settingsState } from "@/store/settingsState"
 import { MIN_THUMBNAIL_SIZE } from "@/utils/constants"
+import { normalizeAttribs, normalizeImgAttribs, sanitizeUrl } from "@/utils/htmlAttribs"
 
 import "./ImageOverlayButton.css"
 
@@ -13,10 +14,12 @@ const ImageComponent = ({ imgNode, isIcon, isBigImage, index, togglePhotoSlider 
   const { fontSize } = useStore(settingsState)
   const altText = imgNode.attribs.alt
 
+  const safeImgProps = normalizeImgAttribs(imgNode.attribs)
+
   return isIcon ? (
     <Tooltip content={altText} disabled={!altText}>
       <img
-        {...imgNode.attribs}
+        {...safeImgProps}
         alt={altText}
         className="icon-image"
         style={{
@@ -26,7 +29,7 @@ const ImageComponent = ({ imgNode, isIcon, isBigImage, index, togglePhotoSlider 
     </Tooltip>
   ) : (
     <div style={{ position: "relative" }}>
-      <img {...imgNode.attribs} alt={altText} className={isBigImage ? "big-image" : ""} />
+      <img {...safeImgProps} alt={altText} className={isBigImage ? "big-image" : ""} />
       <Tooltip content={altText} disabled={!altText}>
         <button
           className="image-overlay-button"
@@ -79,7 +82,7 @@ const ImageOverlayButton = ({ node, index, togglePhotoSlider, isLinkWrapper = fa
 
   if (isIcon) {
     return isLinkWrapper ? (
-      <a {...node.attribs}>
+      <a {...normalizeAttribs(node.attribs)}>
         <ImageComponent
           imgNode={imgNode}
           index={index}
@@ -112,7 +115,7 @@ const ImageOverlayButton = ({ node, index, togglePhotoSlider, isLinkWrapper = fa
               isIcon={isIcon}
               togglePhotoSlider={togglePhotoSlider}
             />
-            <ImageLinkTag href={node.attribs.href} />
+            <ImageLinkTag href={sanitizeUrl(node.attribs?.href ?? "")} />
           </div>
         ) : (
           <ImageComponent

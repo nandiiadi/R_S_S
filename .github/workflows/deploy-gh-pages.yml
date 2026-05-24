@@ -1,4 +1,4 @@
-name: Build and Deploy to gh-pages
+name: Build and deploy to GitHub Pages
 
 on:
   push:
@@ -8,7 +8,6 @@ on:
       - ".editorconfig"
       - ".github/**"
       - ".gitignore"
-      - ".husky/**"
       - ".prettierignore"
       - ".prettierrc"
       - "Caddyfile"
@@ -34,18 +33,25 @@ jobs:
     if: github.event.workflow_run.conclusion == 'success' || github.event_name != 'workflow_run'
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
-      - name: Install pnpm
-        run: npm install -g pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
 
-      - name: Install and Build
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm run build
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build
+        run: pnpm run build
 
       - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@v4.8.0
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
           folder: build
