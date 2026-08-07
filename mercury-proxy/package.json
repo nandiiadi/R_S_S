@@ -7,7 +7,7 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "@jocmp/mercury-parser": "^3.0.9"
+    "@jocmp/mercury-parser": "^3.1.0"
   },
   "engines": {
     "node": ">=22"
